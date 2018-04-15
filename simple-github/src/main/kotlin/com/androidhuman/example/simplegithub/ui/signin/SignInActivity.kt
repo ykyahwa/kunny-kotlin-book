@@ -56,7 +56,7 @@ class SignInActivity : AppCompatActivity() {
         api = GithubApiProvider.provideAuthApi()
         authTokenProvider = AuthTokenProvider(this)
 
-        if (null != authTokenProvider.getToken()) {
+        if (null != authTokenProvider.token) {
             launchMainActivity()
         }
     }
