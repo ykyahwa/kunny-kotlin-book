@@ -51,4 +51,11 @@ dependencies {
     kapt "com.github.bumptech.glide:compiler:$glideVersion"
 
     implementation "org.jetbrains.anko:anko-commons:$ankoVersion"
+
+    implementation "com.squareup.retrofit2:adapter-rxjava2:$retrofitVersion"
+
+    implementation "io.reactivex.rxjava2:rxandroid:$rxAndroidVersion"
+    implementation "io.reactivex.rxjava2:rxjava:$rxJavaVersion"
+
+    implementation "com.jakewharton.rxbinding2:rxbinding-appcompat-v7:$rxBindingVersion"
 }
