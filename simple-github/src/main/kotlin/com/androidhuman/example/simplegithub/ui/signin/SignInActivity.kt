@@ -12,9 +12,10 @@ import com.androidhuman.example.simplegithub.api.AuthApi
 import com.androidhuman.example.simplegithub.api.provideAuthApi
 import com.androidhuman.example.simplegithub.data.AuthTokenProvider
 import com.androidhuman.example.simplegithub.extensions.plusAssign
+import com.androidhuman.example.simplegithub.rx.AutoClearedDisposable
+import com.androidhuman.example.simplegithub.rx.plusAssign
 import com.androidhuman.example.simplegithub.ui.main.MainActivity
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_sign_in.*
 import org.jetbrains.anko.clearTask
 import org.jetbrains.anko.intentFor
@@ -28,11 +29,14 @@ class SignInActivity : AppCompatActivity() {
     internal val authTokenProvider: AuthTokenProvider by lazy { AuthTokenProvider(this) }
 
 //    internal var accessTokenCall: Call<GithubAccessToken>?  =  null
-    internal val disposables = CompositeDisposable()
+    internal val disposables = AutoClearedDisposable(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sign_in)
+
+
+        lifecycle += disposables
 
         btnActivitySignInStart.setOnClickListener {
             val authUri = Uri.Builder().scheme("https").authority("github.com")
@@ -68,11 +72,6 @@ class SignInActivity : AppCompatActivity() {
 //        }
 
         getAccessToken(code)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        disposables.clear()
     }
 
     private fun getAccessToken(code: String) {

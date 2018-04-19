@@ -13,11 +13,12 @@ import com.androidhuman.example.simplegithub.api.GithubApi
 import com.androidhuman.example.simplegithub.api.model.GithubRepo
 import com.androidhuman.example.simplegithub.api.provideGithubApi
 import com.androidhuman.example.simplegithub.extensions.plusAssign
+import com.androidhuman.example.simplegithub.rx.AutoClearedDisposable
+import com.androidhuman.example.simplegithub.rx.plusAssign
 import com.androidhuman.example.simplegithub.ui.repo.RepositoryActivity
 import com.jakewharton.rxbinding2.support.v7.widget.RxSearchView
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_search.*
 import org.jetbrains.anko.startActivity
 
@@ -33,13 +34,16 @@ class SearchActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
 
     internal val api: GithubApi by lazy { provideGithubApi(this) }
 
-    internal val disposables = CompositeDisposable()
+    internal val disposables = AutoClearedDisposable(this)
 
-    internal val viewDisposables = CompositeDisposable()
+    internal val viewDisposables = AutoClearedDisposable(lifecycleOwner = this, alwaysClearOnStop = false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_search)
+
+        lifecycle += disposables
+        lifecycle += viewDisposables
 
         with(rvActivitySearchList) {
             layoutManager = LinearLayoutManager(this@SearchActivity)
@@ -92,15 +96,6 @@ class SearchActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
             return true
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        disposables.clear()
-
-        if (isFinishing) {
-            viewDisposables.clear()
-        }
     }
 
     override fun onItemClick(repository: GithubRepo) {
