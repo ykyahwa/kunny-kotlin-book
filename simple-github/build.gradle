@@ -62,4 +62,9 @@ dependencies {
     implementation "android.arch.lifecycle:extensions:$archComponentVersion"
     implementation "android.arch.lifecycle:compiler:$archComponentVersion"
 
+    implementation "android.arch.persistence.room:runtime:$archComponentVersion"
+    implementation "android.arch.persistence.room:rxjava2:$archComponentVersion"
+    kapt "android.arch.persistence.room:compiler:$archComponentVersion"
+
+
 }
