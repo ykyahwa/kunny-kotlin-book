@@ -3,6 +3,7 @@ package com.androidhuman.example.simplegithub.ui.main
 import android.arch.lifecycle.Lifecycle
 import android.arch.lifecycle.LifecycleObserver
 import android.arch.lifecycle.OnLifecycleEvent
+import android.arch.lifecycle.ViewModelProviders
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
@@ -13,6 +14,7 @@ import com.androidhuman.example.simplegithub.R
 import com.androidhuman.example.simplegithub.api.model.GithubRepo
 import com.androidhuman.example.simplegithub.data.provideSearchHistoryDao
 import com.androidhuman.example.simplegithub.extensions.plusAssign
+import com.androidhuman.example.simplegithub.rx.AutoActivatedDisposable
 import com.androidhuman.example.simplegithub.rx.AutoClearedDisposable
 import com.androidhuman.example.simplegithub.rx.plusAssign
 import com.androidhuman.example.simplegithub.rx.runOnIoScheduler
@@ -35,13 +37,37 @@ class MainActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
 
     internal val disposable = AutoClearedDisposable(this)
 
+    internal val viewDisposable = AutoClearedDisposable(lifecycleOwner = this, alwaysClearOnStop = false)
+
+    internal val viewModelFactory by lazy { MainViewModelFactory(provideSearchHistoryDao(this)) }
+
+    lateinit var viewModel : MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        viewModel = ViewModelProviders.of(this, viewModelFactory)[MainViewModel::class.java]
 
         lifecycle += disposable
+        lifecycle += viewDisposable
+
+        lifecycle += AutoActivatedDisposable(this) {
+            viewModel.searchHistory
+                    .subscribeOn(AndroidSchedulers.mainThread())
+                    .subscribe{items ->
+                        with(adapter) {
+                            if (items.isEmpty) {
+                                clearItems()
+                            } else {
+                                setItems(items.value)
+                            }
+
+                            notifyDataSetChanged()
+                        }
+
+                    }
+        }
         lifecycle += object : LifecycleObserver {
             @OnLifecycleEvent(Lifecycle.Event.ON_START)
             fun fetch() {
@@ -66,7 +92,7 @@ class MainActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (R.id.menu_activity_main_clear_all == item.itemId) {
-            clearAll()
+            disposable += viewModel.clearSearchHistory()
             return true
         }
         return super.onOptionsItemSelected(item)

@@ -107,19 +107,19 @@ class SignInActivity : AppCompatActivity() {
 
         disposables += viewModel.requestAccessToken(
                 BuildConfig.GITHUB_CLIENT_ID, BuildConfig.GITHUB_CLIENT_SECRET, code)
-        showProgress()
-
-        disposables += api.getAccessToken(BuildConfig.GITHUB_CLIENT_ID, BuildConfig.GITHUB_CLIENT_SECRET, code)
-                .map { it.accessToken }
-                .observeOn(AndroidSchedulers.mainThread())
-                .doOnSubscribe{showProgress()}
-                .doOnTerminate{hideProgress()}
-                .subscribe({token ->
-                    authTokenProvider.updateToken(token)
-                    launchMainActivity()
-                }) {
-                    showError(it)
-                }
+//        showProgress()
+//
+//        disposables += api.getAccessToken(BuildConfig.GITHUB_CLIENT_ID, BuildConfig.GITHUB_CLIENT_SECRET, code)
+//                .map { it.accessToken }
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .doOnSubscribe{showProgress()}
+//                .doOnTerminate{hideProgress()}
+//                .subscribe({token ->
+//                    authTokenProvider.updateToken(token)
+//                    launchMainActivity()
+//                }) {
+//                    showError(it)
+//                }
     }
 
     private fun showProgress() {
@@ -132,8 +132,9 @@ class SignInActivity : AppCompatActivity() {
         pbActivitySignIn.visibility = View.GONE
     }
 
-    private fun showError(throwable: Throwable) {
-        longToast(throwable.message?:"No message available")
+    private fun showError(message : String) {
+        longToast(message)
+//        longToast(throwable.message?:"No message available")
     }
 
     private fun launchMainActivity() {

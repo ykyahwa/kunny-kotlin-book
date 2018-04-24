@@ -1,5 +1,6 @@
 package com.androidhuman.example.simplegithub.ui.search
 
+import android.arch.lifecycle.ViewModelProviders
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
@@ -16,10 +17,8 @@ import com.androidhuman.example.simplegithub.data.provideSearchHistoryDao
 import com.androidhuman.example.simplegithub.extensions.plusAssign
 import com.androidhuman.example.simplegithub.rx.AutoClearedDisposable
 import com.androidhuman.example.simplegithub.rx.plusAssign
-import com.androidhuman.example.simplegithub.rx.runOnIoScheduler
 import com.androidhuman.example.simplegithub.ui.repo.RepositoryActivity
 import com.jakewharton.rxbinding2.support.v7.widget.RxSearchView
-import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.activity_search.*
 import org.jetbrains.anko.startActivity
@@ -42,13 +41,54 @@ class SearchActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
 
     internal val searchHistoryDao by lazy { provideSearchHistoryDao(this) }
 
+    internal val viewModelFactory by lazy {
+        SearchViewModelFactory(provideGithubApi(this), provideSearchHistoryDao(this))
+    }
+
+    lateinit var viewModel: SearchViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_search)
 
+        viewModel = ViewModelProviders.of(this, viewModelFactory)[SearchViewModel::class.java]
+
         lifecycle += disposables
         lifecycle += viewDisposables
 
+        viewDisposables += viewModel.searchResult
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{items->
+                    with(adapter) {
+                        if (items.isEmpty) {
+                            clearItems()
+                        } else {
+                            setItems(items.value)
+                        }
+
+                        notifyDataSetChanged()
+                    }
+                }
+
+        viewDisposables += viewModel.message
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{ message ->
+                    if (message.isEmpty) {
+                        hideError()
+                    } else {
+                        showError(message.value)
+                    }
+                }
+
+        viewDisposables += viewModel.isLoading
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{isLoading ->
+                    if (isLoading) {
+                        showProgress()
+                    } else {
+                        hideProgress()
+                    }
+                }
         with(rvActivitySearchList) {
             layoutManager = LinearLayoutManager(this@SearchActivity)
             adapter = this@SearchActivity.adapter
@@ -91,6 +131,16 @@ class SearchActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
 
             expandActionView()
         }
+
+        viewDisposables += viewModel.lastSearchKeyword
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{keyword->
+                    if (keyword.isEmpty) {
+                        menuSearch.expandActionView()
+                    } else {
+                        updateTitle(keyword.value)
+                    }
+                }
         return true
     }
 
@@ -104,7 +154,8 @@ class SearchActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
 
     override fun onItemClick(repository: GithubRepo) {
 
-        disposables += runOnIoScheduler { searchHistoryDao.add(repository) }
+        disposables += viewModel.addToSearchHistory(repository)
+//        disposables += runOnIoScheduler { searchHistoryDao.add(repository) }
 
         startActivity<RepositoryActivity>(
                 RepositoryActivity.KEY_USER_LOGIN to repository.owner.login,
@@ -113,34 +164,35 @@ class SearchActivity : AppCompatActivity(), SearchAdapter.ItemClickListener {
     }
 
     private fun searchRepository(query: String) {
-        clearResults()
-        hideError()
-        showProgress()
-
-        disposables += api.searchRepository(query)
-                .flatMap {
-                    if (0 == it.totalCount) {
-                        Observable.error(IllegalStateException("No Search result"))
-                    } else {
-                        Observable.just(it.items)
-                    }
-                }
-                .observeOn(AndroidSchedulers.mainThread())
-                .doOnSubscribe{
-                    clearResults()
-                    hideError()
-                    showProgress()
-                }
-                .doOnTerminate{hideProgress()}
-                .subscribe({items ->
-                    with(adapter) {
-                        setItems(items)
-                        notifyDataSetChanged()
-                    }
-                }) {
-                    showError(it.message)
-                }
-
+        disposables += viewModel.searchRepository(query)
+//        clearResults()
+//        hideError()
+//        showProgress()
+//
+//        disposables += api.searchRepository(query)
+//                .flatMap {
+//                    if (0 == it.totalCount) {
+//                        Observable.error(IllegalStateException("No Search result"))
+//                    } else {
+//                        Observable.just(it.items)
+//                    }
+//                }
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .doOnSubscribe{
+//                    clearResults()
+//                    hideError()
+//                    showProgress()
+//                }
+//                .doOnTerminate{hideProgress()}
+//                .subscribe({items ->
+//                    with(adapter) {
+//                        setItems(items)
+//                        notifyDataSetChanged()
+//                    }
+//                }) {
+//                    showError(it.message)
+//                }
+//
 
     }
 
