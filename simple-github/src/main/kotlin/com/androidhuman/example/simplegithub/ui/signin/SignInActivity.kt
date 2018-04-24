@@ -1,5 +1,6 @@
 package com.androidhuman.example.simplegithub.ui.signin
 
+import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -31,12 +32,40 @@ class SignInActivity : AppCompatActivity() {
 //    internal var accessTokenCall: Call<GithubAccessToken>?  =  null
     internal val disposables = AutoClearedDisposable(this)
 
+    internal val viewDisposable = AutoClearedDisposable(lifecycleOwner = this, alwaysClearOnStop = false)
+    internal val viewModelFactory by lazy {
+        SignInViewModelFactory(provideAuthApi(), AuthTokenProvider(this))
+    }
+    lateinit var viewModel : SignInViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sign_in)
 
-
+        viewModel = ViewModelProviders.of(this, viewModelFactory)[SignInViewModel::class.java]
         lifecycle += disposables
+        lifecycle += viewDisposable
+
+        viewDisposable += viewModel.accessToken
+                .filter { !it.isEmpty }
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{launchMainActivity()}
+
+        viewDisposable += viewModel.message
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{message -> showError(message)}
+
+        viewDisposable += viewModel.isLoading
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{isLoading ->
+                    if (isLoading) {
+                        showProgress()
+                    } else {
+                        hideProgress()
+                    }
+                }
+
+        disposables += viewModel.loadAccessTocken()
 
         btnActivitySignInStart.setOnClickListener {
             val authUri = Uri.Builder().scheme("https").authority("github.com")
@@ -75,6 +104,9 @@ class SignInActivity : AppCompatActivity() {
     }
 
     private fun getAccessToken(code: String) {
+
+        disposables += viewModel.requestAccessToken(
+                BuildConfig.GITHUB_CLIENT_ID, BuildConfig.GITHUB_CLIENT_SECRET, code)
         showProgress()
 
         disposables += api.getAccessToken(BuildConfig.GITHUB_CLIENT_ID, BuildConfig.GITHUB_CLIENT_SECRET, code)
