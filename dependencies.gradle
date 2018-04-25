@@ -25,4 +25,6 @@ ext {
     rxBindingVersion = '2.0.0'
 
     archComponentVersion = '1.0.0'
+
+    daggerVersion = '2.12'
 }
